@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sibu Makan: Handphone App</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Font: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Supabase CDN (Optional API Connection) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-javascript@2"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Hide scrollbars for slick mobile horizontal scrolling */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Bottom Sheet Slide Up Animation */
+    .sheet-up {
+      animation: slideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .sheet-down {
+      animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { transform: translateY(0); }
+      to { transform: translateY(100%); }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 flex justify-center items-center min-h-screen sm:py-6 sm:px-4">
+
+  <!-- ================= PHONE DEVICE FRAME ================= -->
+  <div class="w-full sm:w-[412px] h-screen sm:h-[860px] bg-white sm:rounded-[48px] overflow-hidden shadow-2xl flex flex-col relative border-0 sm:border-[8px] sm:border-slate-800">
+    
+    <!-- Mobile Status Bar (Time, Battery, Wifi) -->
+    <div class="h-11 bg-white flex justify-between items-center px-6 text-xs font-semibold text-slate-800 shrink-0 z-20 select-none">
+      <span id="currentTime">9:41</span>
+      <!-- Dynamic Island / Speaker Notch (Desktop View Only) -->
+      <div class="hidden sm:block w-24 h-4 bg-black rounded-full"></div>
+      <div class="flex items-center gap-2 text-slate-700">
+        <i class="fa-solid fa-signal text-[11px]"></i>
+        <i class="fa-solid fa-wifi text-[11px]"></i>
+        <i class="fa-solid fa-battery-full text-sm"></i>
+      </div>
+    </div>
+
+    <!-- Mobile App Top Bar -->
+    <header class="px-5 pt-1 pb-3 bg-white flex justify-between items-center shrink-0 z-10 border-b border-slate-100">
+      <div>
+        <div class="flex items-center gap-1.5 text-xs text-amber-600 font-bold uppercase tracking-wider">
+          <i class="fa-solid fa-location-dot"></i> Sibu, Sarawak
+        </div>
+        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight"> JJCM Sibu App</h1>
+      </div>
+      <button onclick="toggleBookmarkView()" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:scale-95 transition relative">
+        <i class="fa-solid fa-heart text-rose-500"></i>
+        <span id="favCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+      </button>
+    </header>
+
+    <!-- Scrollable Screen Content -->
+    <div id="mainScrollArea" class="flex-1 overflow-y-auto no-scrollbar bg-slate-50 pb-20">
+
+      <!-- In-App Search Bar -->
+      <div class="p-4 bg-white">
+        <div class="relative flex items-center">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 text-slate-400 text-sm"></i>
+          <input 
+            type="text" 
+            id="appSearch"
+            oninput="handleSearch()"
+            placeholder="Search Kampua, Kompia, Laksa..." 
+            class="w-full bg-slate-100 pl-11 pr-4 py-2.5 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800 placeholder-slate-400"
+          />
+        </div>
+      </div>
+
+      <!-- Quick Stories / Food Highlights Bar (Horizontal) -->
+      <div class="pt-2 pb-3 bg-white border-b border-slate-100">
+        <div class="flex items-center gap-3 px-4 overflow-x-auto no-scrollbar">
+          <div onclick="filterStory('all')" class="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
+            <div class="w-14 h-14 rounded-full ring-2 ring-amber-500 p-0.5 bg-white">
+              <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=150" class="w-full h-full rounded-full object-cover"/>
+            </div>
+            <span class="text-[11px] font-semibold text-slate-700">All Foods</span>
+          </div>
+
+          <div onclick="filterStory('Halal')" class="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
+            <div class="w-14 h-14 rounded-full ring-2 ring-emerald-500 p-0.5 bg-white">
+              <img src="https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=150" class="w-full h-full rounded-full object-cover"/>
+            </div>
+            <span class="text-[11px] font-semibold text-emerald-700">Halal Only</span>
+          </div>
+
+          <div onclick="filterStory('Non-Halal')" class="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
+            <div class="w-14 h-14 rounded-full ring-2 ring-rose-500 p-0.5 bg-white">
+              <img src="./images/kuehcap.jpeg" class="w-full h-full rounded-full object-cover"/>
+            </div>
+            <span class="text-[11px] font-semibold text-rose-700">Non-Halal</span>
+          </div>
+
+          <div onclick="filterDishName('Kompia')" class="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
+            <div class="w-14 h-14 rounded-full ring-2 ring-amber-300 p-0.5 bg-white">
+              <img src="./images/halalkompia.jpeg" class="w-full h-full rounded-full object-cover"/>
+            </div>
+            <span class="text-[11px] font-semibold text-slate-600">Kompia</span>
+          </div>
+
+          <div onclick="filterDishName('Kampua')" class="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
+            <div class="w-14 h-14 rounded-full ring-2 ring-amber-300 p-0.5 bg-white">
+              <img src="./images/halalSibuKampua.jpeg" class="w-full h-full rounded-full object-cover"/>
+            </div>
+            <span class="text-[11px] font-semibold text-slate-600">Kampua</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segment Toggle Pills -->
+      <div class="px-4 py-3 flex gap-2">
+        <button onclick="setTab('all')" id="pill-all" class="flex-1 py-2 text-xs font-bold rounded-xl bg-slate-900 text-white shadow-sm transition">
+          Discover All
+        </button>
+        <button onclick="setTab('Halal')" id="pill-halal" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 border border-slate-200 transition">
+          🌙 Halal
+        </button>
+        <button onclick="setTab('Non-Halal')" id="pill-nonhalal" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white text-rose-700 border border-slate-200 transition">
+          🥓 Non-Halal
+        </button>
+      </div>
+
+      <!-- Hint Header -->
+      <div class="px-5 flex items-center justify-between text-xs text-slate-400 font-semibold mb-2">
+        <span>POPULAR DISHES IN SIBU</span>
+        <span class="text-amber-600"><i class="fa-solid fa-hand-pointer animate-pulse"></i> Tap picture for details</span>
+      </div>
+
+      <!-- Food Picture Cards Stream (Handphone Feed Style) -->
+      <div id="foodListFeed" class="px-4 space-y-4">
+        <!-- Javascript renders phone cards here -->
+      </div>
+
+      <div id="emptyView" class="hidden text-center py-12 px-6">
+        <i class="fa-solid fa-utensils text-4xl text-slate-300 mb-2"></i>
+        <p class="text-slate-600 text-sm font-semibold">No food found</p>
+        <p class="text-slate-400 text-xs">Try searching for other Sibu delicacies</p>
+      </div>
+
+    </div>
+
+    <!-- ================= NATIVE-STYLE BOTTOM BAR ================= -->
+    <nav class="absolute bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-around items-center px-4 z-20 select-none">
+      <button onclick="setTab('all')" id="nav-home" class="flex flex-col items-center gap-1 text-amber-600 active:scale-95 transition">
+        <i class="fa-solid fa-compass text-lg"></i>
+        <span class="text-[10px] font-bold">Discover</span>
+      </button>
+
+      <button onclick="setTab('Halal')" id="nav-halal" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 active:scale-95 transition">
+        <i class="fa-solid fa-moon text-lg"></i>
+        <span class="text-[10px] font-bold">Halal</span>
+      </button>
+
+      <button onclick="setTab('Non-Halal')" id="nav-nonhalal" class="flex flex-col items-center gap-1 text-slate-400 hover:text-rose-600 active:scale-95 transition">
+        <i class="fa-solid fa-bacon text-lg"></i>
+        <span class="text-[10px] font-bold">Non-Halal</span>
+      </button>
+
+      <button onclick="toggleBookmarkView()" id="nav-saved" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-600 active:scale-95 transition">
+        <i class="fa-solid fa-bookmark text-lg"></i>
+        <span class="text-[10px] font-bold">Saved</span>
+      </button>
+    </nav>
+
+    <!-- ================= MOBILE BOTTOM SHEET (MODAL DRAWER) ================= -->
+    <div id="sheetBackdrop" onclick="closeBottomSheet()" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity"></div>
+
+    <div id="bottomSheet" class="absolute bottom-0 left-0 right-0 max-h-[88%] bg-white rounded-t-[32px] shadow-2xl z-50 hidden flex-col overflow-hidden">
+      
+      <!-- Drawer Drag Handle & Close -->
+      <div class="pt-3 pb-2 px-6 flex justify-between items-center bg-white sticky top-0 z-10 border-b border-slate-100">
+        <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto -mr-6"></div>
+        <button onclick="closeBottomSheet()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center active:scale-90">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Sheet Scrollable Details -->
+      <div class="overflow-y-auto no-scrollbar flex-1 p-5 space-y-5 pb-8">
+        
+        <!-- Big Picture Banner -->
+        <div class="relative h-56 rounded-2xl overflow-hidden shadow-inner">
+          <img id="sheetImage" src="" class="w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"></div>
+          
+          <div class="absolute bottom-3 left-3 right-3 text-white">
+            <span id="sheetBadge" class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1 shadow"></span>
+            <h2 id="sheetTitle" class="text-xl font-bold leading-tight"></h2>
+            <p id="sheetChinese" class="text-xs text-amber-200 font-medium"></p>
+          </div>
+        </div>
+
+        <!-- 1. Description Section -->
+        <div>
+          <h3 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-info text-amber-500"></i> About this food
+          </h3>
+          <p id="sheetDesc" class="text-slate-700 text-xs sm:text-sm leading-relaxed"></p>
+        </div>
+
+        <!-- 2. Difference & Halal Explanation Card -->
+        <div id="differenceCard" class="p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed">
+          <h3 class="font-bold mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-scale-balanced"></i> Key Differences & Ingredients
+          </h3>
+          <p id="sheetDiff" class="text-slate-600"></p>
+        </div>
+
+        <!-- 3. Famous Locations in Sibu -->
+        <div>
+          <h3 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-map-pin text-red-500"></i> Recommended Sibu Stalls
+          </h3>
+          <div id="sheetLocations" class="space-y-2">
+            <!-- Stalls injected via JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // 0. Explicit Guest Session Setup (Bypasses authentication checks)
+    const demoUserSession = {
+      isLoggedIn: true,
+      role: "Judge/Guest Evaluator",
+      sessionId: "hackathon-demo-guest-session"
+    };
+
+    // Optional Supabase Connection Initializer
+    const SUPABASE_URL = 'https://xyzcompany.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiI...';
+    const db = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    // 1. Food Data Structure (10 Authentic Sibu Foods)
+    const sibuFoodItems = [
+      {
+        id: "kampua-nonhalal",
+        name: "Non Halal Sibu Kampua",
+        chinese: "传统福州干盘面 (猪油)",
+        category: "Non-Halal",
+        priceRating: "RM 4.50 - RM 6.00",
+        rating: "4.9 ★",
+        image: "./images/nonHalalKampua.jpg",
+        shortDesc: "Sibu's signature dry noodles tossed in fragrant lard & shallots.",
+        desc: "Kampua Mee is Sibu's most famous breakfast. Fresh Foochow wheat noodles are quickly blanched, vigorously dry-tossed in homemade rendered pork lard, savory soy sauce, and fried shallots, served with tender slices of char siu pork and a complimentary bowl of pork bone soup.",
+        differences: "Authentic version strictly uses rendered pork lard (猪油) and char siu slices. Lard is what creates the legendary fragrant aroma and silky texture that Sibu is famous for.",
+        locations: [
+          { name: "Soon Hock Cafe (新福咖啡店)", area: "Jalan Pedada, Sibu", map: "Soon+Hock+Cafe+Sibu" },
+          { name: "Kedai Kopi Seng Kee", area: "Market Street (near Tua Pek Kong)", map: "Kedai+Kopi+Seng+Kee+Sibu" }
+        ]
+      },
+      {
+        id: "kampua-halal",
+        name: "Halal Sibu Kampua",
+        chinese: "清真干盘面 (鸡油/香葱)",
+        category: "Halal",
+        priceRating: "RM 5.00 - RM 7.00",
+        rating: "4.8 ★",
+        image: "./images/halalSibuKampua.jpeg", 
+        shortDesc: "Muslim-friendly Kampua made with golden chicken oil and chicken char siu.",
+        desc: "Specially perfected for Muslim locals and tourists. The springy noodles are tossed with aromatic chicken essence, garlic-shallot oil, and light sweet soy sauce, served with roasted chicken char siu slices and savory chicken wonton broth.",
+        differences: "Lard is 100% replaced with slow-rendered chicken fat (minyak ayam) or fragrant vegetable oil. Served with sliced roasted chicken char siu in certified halal/Muslim-owned stalls.",
+        locations: [
+          { name: "Selera Harmoni", area: "Taman Harmoni Food Court", map: "Taman+Harmoni+Food+Court+Sibu" },
+          { name: "Star Cafe(Below Star Cineplex)", area: "Sibu Central Market, Jalan Market", map: "Jalan Ramin, Pekan Sibu, 96000 Sibu, Sarawak" }
+        ]
+      },
+      {
+        id: "kompia-nonhalal",
+        name: "Non Halal Kompia",
+        chinese: "炭烤光饼 (猪肉碎)",
+        category: "Non-Halal",
+        priceRating: "RM 1.50 - RM 2.50 each",
+        rating: "4.9 ★",
+        image: "./images/foochowporkkompia.jpeg",
+        shortDesc: "The 'Foochow Bagel' with sesame, stuffed with braised pork belly gravy.",
+        desc: "Baked on the fiery inner clay walls of charcoal cylindrical ovens. The bun turns crunchy on the exterior, chewy inside, sprinkled with fragrant sesame seeds. Stuffed with minced pork braised for hours in rich dark soy gravy.",
+        differences: "The dough traditionally uses lard for crispiness, and the filling is simmered pork belly soaked in pork juices.",
+        locations: [
+          { name: "Sheng Kee Bakery (成记光饼)", area: "Market Road, Sibu Old Town", map: "Sheng+Kee+Bakery+Sibu" },
+          { name: "Hai Bing Coffee Shop", area: "Jalan Maju (Riverfront)", map: "Hai+Bing+Coffee+Shop+Sibu" }
+        ]
+      },
+      {
+        id: "kompia-halal",
+        name: "Halal Kompia",
+        chinese: "清真脆皮光饼 (牛肉/黑胡椒鸡)",
+        category: "Halal",
+        priceRating: "RM 2.00 - RM 3.00 each",
+        rating: "4.7 ★",
+        image: "./images/halalkompia.jpeg",
+        shortDesc: "Crisp sesame clay-oven buns stuffed with braised minced beef or black pepper chicken.",
+        desc: "A hot favorite at Sibu Pasar Malam. The iconic clay-oven sesame bun is adapted with halal dough, toasted until crispy, and generously stuffed with spiced braised minced beef, black pepper chicken, or melted mozzarella cheese.",
+        differences: "Vegetable oil only in the bun dough. Filled with savory minced beef or chicken rendang instead of pork.",
+        locations: [
+          { name: "Kompia Abang Wan (Pasar Malam)", area: "Sibu Night Market, Jalan Market", map: "Sibu+Night+Market" },
+          { name: "Bandung Hawker Stalls", area: "Jalan Bandung, Sibu", map: "Jalan+Bandung+Sibu" }
+        ]
+      },
+      {
+        id: "red-wine-meesua",
+        name: "Red Wine Chicken Mee Sua",
+        chinese: "福州红糟鸡面线 (含酒精)",
+        category: "Non-Halal",
+        priceRating: "RM 8.00 - RM 12.00",
+        rating: "4.9 ★",
+        image: "./images/redwinemeesua.jpeg",
+        shortDesc: "Silky noodles swimming in fermented red yeast glutinous rice wine broth.",
+        desc: "A cornerstone of Foochow culinary heritage. Hand-made wheat vermicelli is served in an aromatic red broth made of fermented red glutinous rice wine (Ang Jiu), fresh julienned ginger, sesame oil, and chicken.",
+        differences: "Contains real alcohol fermented from red yeast rice wine (Ang Jiu), which makes it strictly Non-Halal.",
+        locations: [
+          { name: "Mei Shi Cafe (美食茶室)", area: "Jalan Workshop, Sibu", map: "Mei+Shi+Cafe+Sibu" },
+          { name: "Sibu Central Market (Stall 42)", area: "Level 1, Sibu Central Market", map: "Sibu+Central+Market" }
+        ]
+      },
+      {
+        id: "rojak-sotong-halal",
+        name: "Rojak Sotong",
+        chinese: "鱿鱼罗惹 (清真)",
+        category: "Halal",
+        priceRating: "RM 8.00 - RM 12.00",
+        rating: "4.8 ★",
+        image: "./images/rojaksotong.jpeg",
+        shortDesc: "Tender cuttlefish tossed with fresh fruits, cucumbers, and rich spicy peanut sauce.",
+        desc: "A popular local Malaysian snack dish. Freshly blanched tender cuttlefish (sotong) is mixed with crisp cucumbers, turnip, pineapple, and crushed roasted peanuts, thoroughly coated in a sweet, spicy, and tangy thick prawn paste sauce.",
+        differences: "100% Halal dish using fresh seafood, local tropical fruit mix, and certified halal prawn paste sauce without any non-halal additions.",
+        locations: [
+          { name: "Taman Harmoni Food Court", area: "Jalan Awang Ramli Amit, Sibu", map: "Taman+Harmoni+Food+Court+Sibu" },
+          { name: "Sibu Night Market Rojak Stalls", area: "Pasar Malam Sibu", map: "Sibu+Night+Market" }
+        ]
+      },
+      {
+        id: "dian-bian-hu",
+        name: "Dian Bian Hu (Wok Rim Soup)",
+        chinese: "鼎边糊 (猪骨海鲜高汤)",
+        category: "Non-Halal",
+        priceRating: "RM 5.00 - RM 7.00",
+        rating: "4.8 ★",
+        image: "./images/dianbianhu.jpg",
+        shortDesc: "Rice batter poured along the edges of a sizzling wok, scraped into rich broth.",
+        desc: "Batter is poured on the piping hot iron surface of a large wok. As soon as it cooks into paper-thin sheets, it is scraped directly into boiling broth packed with dried cuttlefish, black fungus, pork slices, and fishballs.",
+        differences: "The broth base is simmered from pork bones and dried squid, finished with pork marrow and sliced offal.",
+        locations: [
+          { name: "Chop Hing Huong (鼎边糊老字号)", area: "Lane behind Tua Pek Kong Temple", map: "Tua+Pek+Kong+Sibu" }
+        ]
+      },
+      {
+        id: "pulut-panggang-halal",
+        name: "Sibu Pulut Panggang",
+        chinese: "糯米蒸卷",
+        category: "Halal",
+        priceRating: "RM 1.50 - RM 2.50 each",
+        rating: "4.8 ★",
+        image: "./images/pulutpanggang.jpeg",
+        shortDesc: "Grilled glutinous rice wrapped in banana leaf with spicy dried shrimp filling.",
+        desc: "A beloved traditional Sarawakian snack. Fragrant glutinous rice infused with coconut milk is wrapped in fresh banana leaves, stuffed with a spicy sambal dried shrimp (udang kering) filling, and grilled over charcoal until smoky and aromatic.",
+        differences: "100% Halal local snack using fresh coconut milk, glutinous rice, and spiced dried shrimp filling cooked in certified halal traditional Malay/Melanau style.",
+        locations: [
+          { name: "Sibu Central Market (Level 1)", area: "Jalan Channel, Sibu", map: "Sibu+Central+Market" },
+          { name: "Taman Harmoni Food Court", area: "Jalan Awang Ramli Amit, Sibu", map: "Taman+Harmoni+Food+Court+Sibu" }
+        ]
+      },
+      {
+        id: "kueh-chap",
+        name: "Sibu Braised Kueh Chap",
+        chinese: "五香卤味粿汁 (猪内脏)",
+        category: "Non-Halal",
+        priceRating: "RM 6.00 - RM 9.00",
+        rating: "4.7 ★",
+        image: "./images/kuehcap.jpeg",
+        shortDesc: "Broad flat rice flakes in aromatic herbal broth with braised pork belly and intestines.",
+        desc: "Steaming hot herbal five-spice dark soup poured over broad rice sheets, garnished with hard-boiled braised egg, tofu puffs, pork belly slices, and tender braised pork intestines.",
+        differences: "Prepared with herbal pork bone broth and braised pork cuts and intestines.",
+        locations: [
+          { name: "Sibu Night Market Kueh Chap", area: "Pasar Malam Sibu", map: "Sibu+Night+Market" },
+          { name: "Payung Kway Chap Stalls", area: "Jalan Pahlawan, Sibu", map: "Jalan+Pahlawan+Sibu" }
+        ]
+      },
+      {
+        id: "mee-sapi",
+        name: "Sibu Mee Sapi",
+        chinese: "砂拉越牛腩干捞面 (清真)",
+        category: "Halal",
+        priceRating: "RM 6.00 - RM 8.50",
+        rating: "4.8 ★",
+        image: "./images/sibumeesapi.jpeg",
+        shortDesc: "Tender braised beef chunks with springy yellow noodles and spicy chili dip.",
+        desc: "A hearty Sarawakian specialty. Springy noodles tossed in spiced beef gravy and garlic oil, topped with stewed beef brisket, beef balls, and tripe, served with a zesty chili sauce.",
+        differences: "100% Halal beef-based local favorite; completely free of pork or alcohol derivatives.",
+        locations: [
+          { name: "Restoran Rahmat Baru", area: "Jalan Kampung Hilir, Sibu", map: "Restoran+Rahmat+Baru+Sibu" },
+          { name: "Mee Sapi Haji Ali", area: "Bandung Walk, Sibu", map: "Bandung+Walk+Sibu" }
+        ]
+      }
+    ];
+
+    // 2. Application State
+    let activeFilter = 'all';
+    let bookmarks = [];
+
+    // 3. Render Picture Feed Cards
+    function renderList(items) {
+      const feed = document.getElementById('foodListFeed');
+      const empty = document.getElementById('emptyView');
+      feed.innerHTML = '';
+
+      if (items.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      items.forEach(item => {
+        const isHalal = item.category === 'Halal';
+        const isFav = bookmarks.includes(item.id);
+
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 flex flex-col active:scale-[0.99] transition duration-200 cursor-pointer";
+        
+        // Tap card to open mobile bottom sheet modal
+        card.onclick = (e) => {
+          if (!e.target.closest('.bookmark-btn')) {
+            openBottomSheet(item.id);
+          }
+        };
+
+        card.innerHTML = `
+          <!-- Picture Interface -->
+          <div class="relative h-44 w-full overflow-hidden">
+            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" loading="lazy" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+            
+            <!-- Category Badge -->
+            <div class="absolute top-3 left-3 flex gap-1.5">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-md flex items-center gap-1 ${isHalal ? 'bg-emerald-600' : 'bg-rose-600'}">
+                <i class="fa-solid ${isHalal ? 'fa-check' : 'fa-bacon'}"></i> ${item.category}
+              </span>
+            </div>
+
+            <!-- Bookmark Button -->
+            <button onclick="toggleBookmark('${item.id}', event)" class="bookmark-btn absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs shadow-md">
+              <i class="fa-${isFav ? 'solid' : 'regular'} fa-heart ${isFav ? 'text-red-500' : 'text-slate-600'}"></i>
+            </button>
+
+            <!-- Bottom Picture Meta -->
+            <div class="absolute bottom-2.5 left-3 right-3 flex justify-between items-end text-white text-xs">
+              <div>
+                <span class="font-bold text-sm block leading-tight drop-shadow-sm">${item.name}</span>
+                <span class="text-[11px] text-amber-200">${item.chinese}</span>
+              </div>
+              <span class="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-semibold text-amber-300">
+                ${item.rating}
+              </span>
+            </div>
+          </div>
+
+          <!-- Bottom Card Snippet -->
+          <div class="p-3.5 flex items-center justify-between text-xs text-slate-500">
+            <p class="truncate pr-2">${item.shortDesc}</p>
+            <span class="text-amber-600 font-bold shrink-0 flex items-center gap-1">
+              Details <i class="fa-solid fa-chevron-right text-[9px]"></i>
+            </span>
+          </div>
+        `;
+        feed.appendChild(card);
+      });
+    }
+
+    // 4. Open Mobile Bottom Sheet (Modal Drawer)
+    function openBottomSheet(foodId) {
+      const food = sibuFoodItems.find(x => x.id === foodId);
+      if (!food) return;
+
+      const isHalal = food.category === 'Halal';
+
+      document.getElementById('sheetImage').src = food.image;
+      document.getElementById('sheetTitle').textContent = food.name;
+      document.getElementById('sheetChinese').textContent = food.chinese;
+
+      const badge = document.getElementById('sheetBadge');
+      badge.textContent = isHalal ? "✓ Halal Muslim Friendly" : "✕ Traditional Non-Halal (Pork/Wine)";
+      badge.className = `inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1 shadow text-white ${isHalal ? 'bg-emerald-600' : 'bg-rose-600'}`;
+
+      document.getElementById('sheetDesc').textContent = food.desc;
+
+      // Difference Card Styling
+      const diffCard = document.getElementById('differenceCard');
+      if (isHalal) {
+        diffCard.className = "p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed bg-emerald-50 border-emerald-200 text-emerald-900";
+      } else {
+        diffCard.className = "p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed bg-rose-50 border-rose-200 text-rose-900";
+      }
+      document.getElementById('sheetDiff').textContent = food.differences;
+
+      // Stalls / Locations Injection
+      const locBox = document.getElementById('sheetLocations');
+      locBox.innerHTML = '';
+      food.locations.forEach(loc => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-3 bg-slate-100 rounded-xl";
+        item.innerHTML = `
+          <div>
+            <h4 class="font-bold text-xs sm:text-sm text-slate-800">${loc.name}</h4>
+            <p class="text-[11px] text-slate-500"><i class="fa-solid fa-location-arrow text-amber-500 mr-1"></i> ${loc.area}</p>
+          </div>
+          <a href="https://www.google.com/maps/search/?api=1&query=${loc.map}" target="_blank" class="px-3 py-1.5 bg-amber-500 active:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow-sm flex items-center gap-1">
+            <i class="fa-solid fa-diamond-turn-right"></i> GPS
+          </a>
+        `;
+        locBox.appendChild(item);
+      });
+
+      // Show sheet with slide up animation
+      const sheet = document.getElementById('bottomSheet');
+      const backdrop = document.getElementById('sheetBackdrop');
+      backdrop.classList.remove('hidden');
+      sheet.classList.remove('hidden', 'sheet-down');
+      sheet.classList.add('flex', 'sheet-up');
+    }
+
+    // 5. Close Mobile Bottom Sheet
+    function closeBottomSheet() {
+      const sheet = document.getElementById('bottomSheet');
+      const backdrop = document.getElementById('sheetBackdrop');
+      sheet.classList.remove('sheet-up');
+      sheet.classList.add('sheet-down');
+      setTimeout(() => {
+        sheet.classList.add('hidden');
+        backdrop.classList.add('hidden');
+      }, 200);
+    }
+
+    // 6. Filter & Segment Tab Controls
+    function setTab(category) {
+      activeFilter = category;
+      document.getElementById('appSearch').value = '';
+
+      // Reset pill styles
+      const pills = ['all', 'halal', 'nonhalal'];
+      pills.forEach(p => {
+        const btn = document.getElementById(`pill-${p}`);
+        if (btn) {
+          btn.className = "flex-1 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 border border-slate-200 transition";
+        }
+      });
+
+      if (category === 'all') {
+        document.getElementById('pill-all').className = "flex-1 py-2 text-xs font-bold rounded-xl bg-slate-900 text-white shadow-sm transition";
+      } else if (category === 'Halal') {
+        document.getElementById('pill-halal').className = "flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white shadow-sm transition";
+      } else if (category === 'Non-Halal') {
+        document.getElementById('pill-nonhalal').className = "flex-1 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white shadow-sm transition";
+      }
+
+      // Update Bottom Navigation Bar icons
+      document.getElementById('nav-home').className = `flex flex-col items-center gap-1 text-[10px] font-bold ${category === 'all' ? 'text-amber-600' : 'text-slate-400'}`;
+      document.getElementById('nav-halal').className = `flex flex-col items-center gap-1 text-[10px] font-bold ${category === 'Halal' ? 'text-emerald-600' : 'text-slate-400'}`;
+      document.getElementById('nav-nonhalal').className = `flex flex-col items-center gap-1 text-[10px] font-bold ${category === 'Non-Halal' ? 'text-rose-600' : 'text-slate-400'}`;
+
+      filterAndRender();
+    }
+
+    function filterStory(cat) {
+      setTab(cat);
+    }
+
+    function filterDishName(name) {
+      document.getElementById('appSearch').value = name;
+      handleSearch();
+    }
+
+    function handleSearch() {
+      filterAndRender();
+    }
+
+    function filterAndRender() {
+      const q = document.getElementById('appSearch').value.toLowerCase().trim();
+      const filtered = sibuFoodItems.filter(item => {
+        const matchCat = activeFilter === 'all' || item.category === activeFilter;
+        const matchSearch = item.name.toLowerCase().includes(q) || 
+                            item.chinese.includes(q) || 
+                            item.desc.toLowerCase().includes(q);
+        return matchCat && matchSearch;
+      });
+      renderList(filtered);
+    }
+
+    // 7. Favorite / Bookmark Features
+    function toggleBookmark(id, event) {
+      event.stopPropagation();
+      if (bookmarks.includes(id)) {
+        bookmarks = bookmarks.filter(b => b !== id);
+      } else {
+        bookmarks.push(id);
+      }
+      document.getElementById('favCount').textContent = bookmarks.length;
+      filterAndRender();
+    }
+
+    function toggleBookmarkView() {
+      if (bookmarks.length === 0) {
+        alert("Your bucket list is empty! Tap the heart on any food card to bookmark it.");
+        return;
+      }
+      const savedItems = sibuFoodItems.filter(item => bookmarks.includes(item.id));
+      renderList(savedItems);
+    }
+
+    // 8. Update Status Bar Mobile Clock
+    function updatePhoneClock() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+    }
+    setInterval(updatePhoneClock, 1000);
+    updatePhoneClock();
+
+    // 9. Initial Load Trigger (Directly renders feed without authentication checks)
+    renderList(sibuFoodItems);
+  </script>
+</body>
+</html>
